@@ -155,3 +155,4 @@ Use the browser’s install / Add to Home Screen. The manifest name is GoldDesk,
 - Market hours used here: closed from Friday 21:00 until Sunday 22:00, Banjul.
 - Rollover warning: 21:00–23:00 Banjul, every weekday the market is open.
 - A holiday on the built-in list (Thanksgiving 2026, Christmas, New Year) is treated as a thin day even if the clock says a session is open.
+# gold
