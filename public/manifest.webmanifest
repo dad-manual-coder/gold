@@ -1,0 +1,13 @@
+{
+  "name": "GoldDesk",
+  "short_name": "GoldDesk",
+  "description": "XAU/USD command center anchored to Banjul time.",
+  "start_url": "./desk.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0B0E11",
+  "theme_color": "#0B0E11",
+  "icons": [
+    { "src": "./favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

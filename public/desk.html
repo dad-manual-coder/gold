@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GoldDesk</title>
+  <meta name="description" content="XAU/USD command center anchored to Banjul time. Sessions, liquidity, and risk, with daylight saving already handled." />
+  <meta name="theme-color" content="#0B0E11" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="desk.css" />
+  <style>html,body{background:#0b0e11;color:#ece7dc}</style>
+</head>
+<body>
+  <header class="mast">
+    <div class="wrap mast-in">
+      <div class="brandrow">
+        <div>
+          <p class="kicker">XAU/USD command</p>
+          <p class="word">GOLD<span>DESK</span></p>
+          <p class="sub" style="text-align:left">Know the session. Know the risk.</p>
+        </div>
+        <div>
+          <p class="kicker" style="text-align:right">Banjul</p>
+          <p class="clock" data-bind="banjul-clock">00:00:00</p>
+          <p class="sub" data-bind="banjul-date">—</p>
+        </div>
+      </div>
+      <div class="zones" id="zones">
+        <div class="zone"><span>GMT</span><b data-bind="z-utc">—</b></div>
+        <div class="zone"><span>London</span><b data-bind="z-ldn">—</b></div>
+        <div class="zone"><span>New York</span><b data-bind="z-ny">—</b></div>
+        <div class="zone"><span>Sydney</span><b data-bind="z-syd">—</b></div>
+      </div>
+      <p class="status" aria-live="polite"><span class="pip" id="tone"></span><span data-bind="status">Reading the gold week…</span></p>
+      <div class="ribbon-box">
+        <div class="ribbon" id="ribbon" aria-hidden="true"></div>
+        <ul class="scale"><li>00</li><li>06</li><li>12</li><li>18</li><li>24</li></ul>
+        <ul class="legend" id="legend"></ul>
+      </div>
+      <nav class="topnav" aria-label="Sections" id="topnav"></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="page view" data-view="desk" id="view-desk">
+      <div class="grid-2">
+        <article class="card">
+          <p class="kicker">Right now</p>
+          <h2 data-bind="greet">—</h2>
+          <p data-bind="greet-line"></p>
+          <p class="callout" data-bind="rhythm"></p>
+        </article>
+        <article class="card" id="market-card">
+          <p class="kicker">Gold market</p>
+          <p class="stat" data-bind="market-label">—</p>
+          <p data-bind="market-detail"></p>
+          <p class="mono" data-bind="market-next"></p>
+        </article>
+      </div>
+      <div class="grid-3">
+        <article class="card">
+          <p class="kicker">Liquidity</p>
+          <p class="stat" data-bind="liq-title">—</p>
+          <p data-bind="liq-why"></p>
+        </article>
+        <article class="card">
+          <p class="kicker">Next event</p>
+          <p class="stat" data-bind="cue-time">—</p>
+          <p data-bind="cue-name"></p>
+        </article>
+        <article class="card" id="vol-card">
+          <p class="kicker">Volatility</p>
+          <p class="stat" data-bind="vol-title">Clear</p>
+          <p data-bind="vol-body">No red-flag window on the clock.</p>
+        </article>
+      </div>
+      <div class="grid-2">
+        <article class="card">
+          <p class="kicker">Spot indication</p>
+          <p class="stat" data-bind="price">—</p>
+          <p class="muted" data-bind="price-note">Not a broker quote. Do not size a trade off this number.</p>
+        </article>
+        <article class="card">
+          <p class="kicker">Banjul weather</p>
+          <p class="stat" data-bind="weather">—</p>
+          <p class="muted" data-bind="weather-note">Flavor only. The session clock does not need it.</p>
+        </article>
+      </div>
+      <article class="card">
+        <p class="kicker">State check</p>
+        <p data-bind="state-line">Confirm sleep, food, and temper before you size anything.</p>
+        <a class="textbtn" href="#mindset">Open the state check</a>
+      </article>
+    </section>
+
+    <section class="page view" data-view="sessions" hidden>
+      <article class="card">
+        <h2>Time zones, corrected for daylight saving</h2>
+        <p class="callout">You live on GMT — the same clock London runs on in winter. From late October to late March you are on London trader time. No math needed. The rest of the year London is one hour ahead. This table is the live offset, not a printed postcard.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>City</th><th>Now</th><th>Offset</th><th>Season</th><th>Session on your clock</th><th></th></tr>
+            </thead>
+            <tbody id="zone-table"></tbody>
+          </table>
+        </div>
+      </article>
+      <article class="card" id="session-notes"></article>
+    </section>
+
+    <section class="page view" data-view="liquidity" hidden>
+      <article class="card" id="liq-live">
+        <p class="kicker">This hour</p>
+        <h2 data-bind="liq-title">—</h2>
+        <p data-bind="liq-why"></p>
+        <p data-bind="liq-action"></p>
+      </article>
+      <article class="card">
+        <h2>Every hour on your clock</h2>
+        <p class="muted">Sampled at half past, in Banjul time. Green is where size shows up. Red is where spreads lie.</p>
+        <div class="hours" id="hours"></div>
+      </article>
+      <article class="card">
+        <h3>High</h3>
+        <p>London open drive, New York open, and the London/New York overlap. One clean idea beats three bored ones.</p>
+        <h3>Medium</h3>
+        <p>Mid-London and mid-New York. Liquid enough. The open impulse is spent. A-setups only.</p>
+        <h3>Low and danger</h3>
+        <p><strong>21:00–23:00 your time.</strong> Rollover. Swaps hit, the book thins, gold spreads widen. Do not enter. If you are in, the stop has to survive a fatter spread or you should be flat.</p>
+        <p><strong>Friday after 20:00.</strong> The cash week is ending. A leftover position is a weekend gap you did not write down.</p>
+        <p><strong>Sunday reopen, first two hours.</strong> Quotes jump more than they trade. Let a range print. Fade nothing.</p>
+        <p><strong>Christmas, New Year, US Thanksgiving.</strong> Banks are out. A quiet tape fakes a breakout.</p>
+        <p><strong>30 minutes before and after FOMC, NFP, and CPI.</strong> The first tick pays the market maker. The second move is the one that tends to stick.</p>
+      </article>
+    </section>
+
+    <section class="page view" data-view="calendar" hidden>
+      <article class="card">
+        <h2>USD and gold calendar</h2>
+        <p class="muted">High-impact prints are flagged 30 minutes either side. Confirm the agency time the week of the release — dates here are the scheduled 2026 prints.</p>
+        <div id="events"></div>
+      </article>
+      <article class="card">
+        <h2>Desks worth opening</h2>
+        <div class="links" id="links"></div>
+      </article>
+      <article class="card">
+        <h2>Accounts to follow</h2>
+        <p class="muted">A list, not a feed. The desk stays quiet on purpose.</p>
+        <div class="accounts" id="accounts"></div>
+      </article>
+    </section>
+
+    <section class="page view" data-view="playbook" hidden>
+      <article class="card">
+        <h2>Playbook</h2>
+        <p class="muted">Conditional logic. If the trigger is not there, it is not the trade.</p>
+        <label class="field">Search
+          <input class="search" id="q" type="search" placeholder="London, NFP, rollover…" autocomplete="off" />
+        </label>
+        <div id="plays"></div>
+      </article>
+    </section>
+
+    <section class="page view" data-view="mindset" hidden>
+      <article class="card" id="state-card">
+        <h2>State check</h2>
+        <p>This is not a quote. It is a gate.</p>
+        <label class="check"><input type="checkbox" id="slept" /> Slept</label>
+        <label class="check"><input type="checkbox" id="fed" /> Fed</label>
+        <label class="check"><input type="checkbox" id="angry" /> Angry</label>
+        <label class="check"><input type="checkbox" id="revenge" /> Revenge-trading urge</label>
+        <p data-bind="verdict"></p>
+      </article>
+      <article class="card">
+        <h2>Rules</h2>
+        <p data-bind="rules"></p>
+        <p class="mono" data-bind="lock-line"></p>
+        <button class="primary" type="button" id="lock-btn">Start a 30-minute lockout</button>
+      </article>
+      <article class="card">
+        <h2>Journal</h2>
+        <form id="journal" class="grid-2">
+          <label class="field">Setup<input name="setup" type="text" required maxlength="120" placeholder="London breakout" /></label>
+          <label class="field">Emotion<input name="emotion" type="text" required maxlength="80" placeholder="Calm, bored, rushed" /></label>
+          <label class="field">Spread at entry<input name="spread" type="text" maxlength="40" placeholder="What was the spread?" /></label>
+          <label class="field">Grade
+            <select name="grade">
+              <option>A-setup</option>
+              <option>Bored trade</option>
+            </select>
+          </label>
+          <label class="field">Result
+            <select name="result">
+              <option>scratch</option>
+              <option>win</option>
+              <option>loss</option>
+            </select>
+          </label>
+          <div style="align-self:end"><button class="primary" type="submit">Log it</button></div>
+        </form>
+        <div id="journal-list"></div>
+      </article>
+    </section>
+
+    <section class="page view" data-view="gambia" hidden>
+      <article class="card">
+        <p class="kicker">Right now in The Gambia</p>
+        <h2 data-bind="banjul-clock">—</h2>
+        <p data-bind="banjul-date"></p>
+        <p data-bind="daylight"></p>
+        <p class="callout" data-bind="rhythm"></p>
+      </article>
+      <div class="grid-2">
+        <article class="card">
+          <h2>Your clock, their open</h2>
+          <p>Market open <span class="mono" data-bind="cd-open"></span></p>
+          <p>London open <span class="mono" data-bind="cd-ldn"></span></p>
+          <p>New York open <span class="mono" data-bind="cd-ny"></span></p>
+          <p>Week ends <span class="mono" data-bind="cd-close"></span></p>
+        </article>
+        <article class="card">
+          <h2>Prayer times, Banjul</h2>
+          <p class="muted">Optional. Muslim World League method, via the public timetable. The desk does not block a trade on this.</p>
+          <div id="prayers"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="page view" data-view="alerts" hidden>
+      <article class="card">
+        <h2>Alerts</h2>
+        <p class="muted">The page always toasts. A system notification needs permission, and this browser has to stay allowed to notify.</p>
+        <button class="primary" type="button" id="permit">Allow notifications</button>
+        <p class="mono" data-bind="permit-state"></p>
+        <label class="check"><input type="checkbox" data-alert="london" /> 15 min before London open</label>
+        <label class="check"><input type="checkbox" data-alert="ny" /> Wake me for New York open</label>
+        <label class="check"><input type="checkbox" data-alert="news" /> 30 min before high-impact USD</label>
+        <label class="check"><input type="checkbox" data-alert="rollover" /> Rollover warning at 21:00</label>
+        <label class="check"><input type="checkbox" data-alert="friday" /> Friday close warning at 20:00</label>
+        <label class="check"><input type="checkbox" data-alert="sunday" /> Sunday open countdown</label>
+      </article>
+      <article class="card">
+        <h2>What fires</h2>
+        <p>London and New York use the live open, so summer and winter clocks are already in the warning. Rollover is 21:00 on your clock. Friday is 20:00. Sunday fires inside the last hour before the reopen. CPI, NFP, and FOMC fire inside 30 minutes.</p>
+        <a class="textbtn" href="index.html">Run the boot sequence</a>
+      </article>
+    </section>
+    <p class="dim" id="fault" hidden>The desk hit a fault on this paint. Reload the page.</p>
+  </main>
+
+  <div class="more card" id="more" hidden>
+<a href="#calendar" style="text-decoration: none;">Calendar</a>
+
+<a href="#mindset" style="text-decoration: none;">Mindset</a>
+
+<a href="#gambia" style="text-decoration: none;">Gambia</a>
+
+<a href="#alerts" style="text-decoration: none;">Alerts</a>
+  </div>
+  <nav class="dock" aria-label="Mobile">
+    <a href="#desk" data-go="desk">Desk</a>
+    <a href="#sessions" data-go="sessions">Sessions</a>
+    <a href="#liquidity" data-go="liquidity">Risk</a>
+    <a href="#playbook" data-go="playbook">Book</a>
+    <button type="button" id="more-btn">More</button>
+  </nav>
+  <div class="toastbox" id="toasts" aria-live="polite"></div>
+  <script src="desk.js"></script>
+</body>
+</html>

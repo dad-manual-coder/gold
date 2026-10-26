@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GoldDesk</title>
+  <meta name="description" content="GoldDesk loader. Reads the device, the Banjul clock, and the desk files, then opens the XAU/USD command center once it is past 50%." />
+  <meta name="theme-color" content="#0B0E11" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="prefetch" href="desk.css" as="style" />
+  <link rel="prefetch" href="desk.js" as="script" />
+  <link rel="prefetch" href="desk.html" as="document" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="loader.css" />
+</head>
+<body>
+  <div class="dust" aria-hidden="true">
+    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+  </div>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="scan" aria-hidden="true"></div>
+  <div class="topline" id="topline"></div>
+  <div class="corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+  <main class="shell">
+    <header class="top">
+      <div class="brandrow">
+        <div class="mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2.2 21 12 12 21.8 3 12 12 2.2Z" fill="none" stroke="#D4AF37" stroke-width="1.4" />
+            <path d="M12 7.2 16.2 12 12 16.8 7.8 12 12 7.2Z" fill="#D4AF37" />
+          </svg>
+        </div>
+        <div>
+          <p class="brand">GOLDDESK</p>
+          <p class="tag">XAU/USD boot · anchored to Banjul</p>
+        </div>
+      </div>
+      <div class="clockblock">
+        <p class="kicker">Banjul · GMT</p>
+        <p class="hero-time" id="banjul-clock">00:00:00</p>
+        <p class="hero-date" id="banjul-date">—</p>
+      </div>
+    </header>
+
+    <div class="stage">
+      <section class="instrument" aria-label="Load">
+        <div class="orb-row">
+          <div class="orb">
+            <svg viewBox="0 0 200 200" aria-hidden="true">
+              <circle class="ring-ticks" cx="100" cy="100" r="90"></circle>
+              <circle class="ring-spin" cx="100" cy="100" r="64"></circle>
+              <circle class="ring-core" cx="100" cy="100" r="48"></circle>
+              <circle class="ring-track" cx="100" cy="100" r="78"></circle>
+              <circle class="ring-value" id="arc" cx="100" cy="100" r="78"></circle>
+            </svg>
+            <div class="readout"><span id="pct">0</span><small>%</small></div>
+          </div>
+          <div class="word">
+            <h1>GOLD<span>DESK</span></h1>
+            <p class="sub">Know the session. Know the risk. Trade the gold.</p>
+          </div>
+        </div>
+
+        <div class="gate" id="gate">
+          <b id="gate-label">HOLD</b>
+          <span id="gate-sub">Shut until the desk is half loaded</span>
+        </div>
+
+        <div class="track-wrap">
+          <div class="bar" id="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Desk load">
+            <i id="fill"></i>
+            <span class="notch" title="50% gate"></span>
+          </div>
+          <div class="track-meta">
+            <span class="line" id="line">Reading the device</span>
+            <span>50% gate</span>
+          </div>
+        </div>
+
+        <div class="ribbon-box">
+          <div class="ribbon" aria-hidden="true">
+            <i class="seg syd-a"></i>
+            <i class="seg syd-b"></i>
+            <i class="seg tky"></i>
+            <i class="seg ldn"></i>
+            <i class="seg ny"></i>
+            <i class="now" id="now-mark"></i>
+          </div>
+          <ul class="legend">
+            <li><b class="syd"></b>Sydney</li>
+            <li><b class="tky"></b>Tokyo</li>
+            <li><b class="ldn"></b>London</li>
+            <li><b class="ny"></b>New York</li>
+          </ul>
+        </div>
+        <button class="retry" id="retry" type="button" hidden>Open the desk</button>
+      </section>
+
+      <section class="panel" aria-label="Device state">
+        <div class="panel-h">
+          <h2>Device state</h2>
+          <span class="count" id="count">00 / 12</span>
+        </div>
+        <ul class="rows" id="rows"></ul>
+        <p class="panel-note">The gate opens at 06 / 12. The last three lines pull in the desk.</p>
+      </section>
+    </div>
+
+    <footer>
+      <div class="zones" aria-label="Session clocks">
+        <div class="zone"><span>GMT</span><b id="z-gmt">—</b></div>
+        <div class="zone"><span>London</span><b id="z-ldn">—</b></div>
+        <div class="zone"><span>New York</span><b id="z-ny">—</b></div>
+        <div class="zone"><span>Sydney</span><b id="z-syd">—</b></div>
+      </div>
+      <p class="foot">Gate stays shut under 50%. Past that, the desk opens by itself.</p>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var rowsEl = document.getElementById("rows");
+      var pctEl = document.getElementById("pct");
+      var fillEl = document.getElementById("fill");
+      var barEl = document.getElementById("bar");
+      var lineEl = document.getElementById("line");
+      var gateEl = document.getElementById("gate");
+      var gateLabel = document.getElementById("gate-label");
+      var gateSub = document.getElementById("gate-sub");
+      var countEl = document.getElementById("count");
+      var topline = document.getElementById("topline");
+      var arc = document.getElementById("arc");
+      var retry = document.getElementById("retry");
+      var nowMark = document.getElementById("now-mark");
+      var R = 78;
+      var C = 2 * Math.PI * R;
+      arc.style.strokeDasharray = String(C);
+      arc.style.strokeDashoffset = String(C);
+
+      var spec = [
+        ["clock", "Device clock"],
+        ["net", "Network"],
+        ["anchor", "Banjul anchor"],
+        ["ldn", "London DST"],
+        ["ny", "New York DST"],
+        ["syd", "Sydney DST"],
+        ["screen", "Display"],
+        ["hw", "Hardware"],
+        ["store", "Storage"],
+        ["css", "Desk styles"],
+        ["js", "Desk program"],
+        ["html", "Desk file"]
+      ];
+
+      spec.forEach(function (item, index) {
+        var li = document.createElement("li");
+        li.dataset.id = item[0];
+        var idx = document.createElement("span");
+        idx.className = "idx";
+        idx.textContent = String(index + 1).padStart(2, "0");
+        var copy = document.createElement("div");
+        var k = document.createElement("p");
+        k.className = "k";
+        k.textContent = item[1];
+        var v = document.createElement("p");
+        v.className = "v";
+        v.textContent = "Waiting";
+        copy.appendChild(k);
+        copy.appendChild(v);
+        var pip = document.createElement("span");
+        pip.className = "pip";
+        li.appendChild(idx);
+        li.appendChild(copy);
+        li.appendChild(pip);
+        rowsEl.appendChild(li);
+      });
+
+      function parts(date, timeZone) {
+        var fmt = new Intl.DateTimeFormat("en-US", {
+          timeZone: timeZone,
+          hourCycle: "h23",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        });
+        var bag = {};
+        fmt.formatToParts(date).forEach(function (p) {
+          if (p.type !== "literal") bag[p.type] = p.value;
+        });
+        var hour = Number(bag.hour);
+        if (hour === 24) hour = 0;
+        return {
+          year: Number(bag.year),
+          month: Number(bag.month),
+          day: Number(bag.day),
+          hour: hour,
+          minute: Number(bag.minute),
+          second: Number(bag.second)
+        };
+      }
+      function zones(date, timeZone) {
+        var p = parts(date, timeZone);
+        var asUTC = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+        return Math.round((asUTC - date.getTime()) / 60000);
+      }
+      function clockIn(date, timeZone) {
+        var p = parts(date, timeZone);
+        function pad(n) { return String(n).padStart(2, "0"); }
+        return pad(p.hour) + ":" + pad(p.minute) + ":" + pad(p.second);
+      }
+      function dst(date, timeZone) {
+        var year = parts(date, timeZone).year;
+        var jan = zones(new Date(Date.UTC(year, 0, 15, 12)), timeZone);
+        var jul = zones(new Date(Date.UTC(year, 6, 15, 12)), timeZone);
+        var now = zones(date, timeZone);
+        var sign = now < 0 ? "-" : "+";
+        var abs = Math.abs(now);
+        var h = Math.floor(abs / 60);
+        var m = abs % 60;
+        var off = "UTC" + sign + h + (m ? ":" + String(m).padStart(2, "0") : "");
+        return (now > Math.min(jan, jul) ? "Daylight time" : "Standard time") + " · " + off;
+      }
+      function paintClocks() {
+        var date = new Date();
+        document.getElementById("banjul-clock").textContent = clockIn(date, "Africa/Banjul");
+        document.getElementById("banjul-date").textContent = new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Africa/Banjul",
+          weekday: "short",
+          day: "2-digit",
+          month: "short",
+          year: "numeric"
+        }).format(date);
+        document.getElementById("z-gmt").textContent = clockIn(date, "UTC");
+        document.getElementById("z-ldn").textContent = clockIn(date, "Europe/London");
+        document.getElementById("z-ny").textContent = clockIn(date, "America/New_York");
+        document.getElementById("z-syd").textContent = clockIn(date, "Australia/Sydney");
+        var b = parts(date, "Africa/Banjul");
+        var pos = ((b.hour + b.minute / 60 + b.second / 3600) / 24) * 100;
+        nowMark.style.left = pos + "%";
+      }
+      paintClocks();
+      var clockTimer = window.setInterval(paintClocks, 1000);
+
+      function setRow(id, detail, state) {
+        var li = rowsEl.querySelector('[data-id="' + id + '"]');
+        if (!li) return;
+        li.querySelector(".v").textContent = detail;
+        li.querySelector(".pip").className = "pip " + state;
+        if (state === "run") li.classList.add("hot");
+        else li.classList.remove("hot");
+      }
+
+      var shown = 0;
+      var target = 0;
+      var painting = false;
+      function applyPct(value) {
+        var pct = Math.max(0, Math.min(100, value));
+        pctEl.textContent = String(pct);
+        fillEl.style.width = pct + "%";
+        topline.style.width = pct + "%";
+        barEl.setAttribute("aria-valuenow", String(pct));
+        arc.style.strokeDashoffset = String(C * (1 - pct / 100));
+      }
+      function ease() {
+        painting = true;
+        if (reduced || Math.abs(target - shown) < 0.6) {
+          shown = target;
+          applyPct(Math.round(shown));
+          painting = false;
+          return;
+        }
+        shown += (target - shown) * 0.22;
+        applyPct(Math.round(shown));
+        requestAnimationFrame(ease);
+      }
+      function paintProgress(done, total) {
+        target = Math.max(0, Math.min(100, Math.round((done / total) * 100)));
+        countEl.textContent = String(done).padStart(2, "0") + " / " + String(total).padStart(2, "0");
+        var open = target >= 50;
+        gateEl.classList.toggle("clear", open);
+        gateLabel.textContent = target >= 100 ? "ENGAGE" : open ? "CLEAR" : "HOLD";
+        gateSub.textContent = target >= 100
+          ? "Opening the desk"
+          : open
+            ? "Clear · finishing the files"
+            : "Shut until the desk is half loaded";
+        if (!painting) ease();
+        return target;
+      }
+      function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+      function withTimeout(promise, ms) {
+        var timer;
+        var timeout = new Promise(function (_, reject) {
+          timer = setTimeout(function () { reject(new Error("timeout")); }, ms);
+        });
+        return Promise.race([promise, timeout]).then(function (value) {
+          clearTimeout(timer);
+          return value;
+        }, function (err) {
+          clearTimeout(timer);
+          throw err;
+        });
+      }
+
+      async function asset(id, url) {
+        setRow(id, "Loading " + url, "run");
+        var res = await fetch(url, { cache: "force-cache" });
+        if (!res.ok) throw new Error(url + " " + res.status);
+        await res.text();
+        setRow(id, url + " ready", "ok");
+      }
+
+      var launched = false;
+      function destination() {
+        var view = "";
+        try {
+          var q = new URLSearchParams(location.search).get("view") || "";
+          var hash = (location.hash || "").replace(/^#/, "");
+          var stored = sessionStorage.getItem("golddesk-view") || "";
+          var pick = q || (/^[a-z]+$/.test(hash) ? hash : "") || stored;
+          if (/^[a-z]+$/.test(pick)) view = "#" + pick;
+        } catch (e) { /* storage or URL blocked */ }
+        return "desk.html" + view;
+      }
+      function go(pct) {
+        if (launched || pct < 50) return;
+        launched = true;
+        window.clearInterval(clockTimer);
+        document.body.classList.add("leaving");
+        window.setTimeout(function () {
+          location.replace(destination());
+        }, reduced ? 40 : 420);
+      }
+      retry.addEventListener("click", function () {
+        paintProgress(spec.length, spec.length);
+        go(100);
+      });
+
+      async function run() {
+        var now = new Date();
+        var step = reduced ? 16 : 125;
+        var jobs = [
+          function () {
+            var zone = Intl.DateTimeFormat().resolvedOptions().timeZone || "unknown";
+            return ["clock", zone + " · " + now.toLocaleTimeString()];
+          },
+          function () {
+            var nav = navigator;
+            var link = nav.connection || nav.mozConnection || nav.webkitConnection;
+            var bits = [nav.onLine ? "Online" : "Offline — desk clock still runs"];
+            if (link && link.effectiveType) bits.push(link.effectiveType);
+            if (link && typeof link.downlink === "number") bits.push(link.downlink + " Mb/s");
+            return ["net", bits.join(" · ")];
+          },
+          function () {
+            var deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+            var drift = Math.round((zones(now, deviceZone) - zones(now, "Africa/Banjul")) / 60);
+            var detail = drift === 0
+              ? "Device matches GMT. Desk stays on Banjul."
+              : "Device is " + (drift > 0 ? "+" : "") + drift + "h from Banjul. Desk stays on GMT.";
+            return ["anchor", detail];
+          },
+          function () { return ["ldn", dst(now, "Europe/London")]; },
+          function () { return ["ny", dst(now, "America/New_York")]; },
+          function () { return ["syd", dst(now, "Australia/Sydney")]; },
+          function () {
+            var touch = window.matchMedia("(pointer: coarse)").matches ? "touch" : "pointer";
+            return ["screen", window.innerWidth + "×" + window.innerHeight + " · " + (window.devicePixelRatio || 1) + "x · " + touch];
+          },
+          async function () {
+            var cores = navigator.hardwareConcurrency ? navigator.hardwareConcurrency + " cores" : "cores n/a";
+            var mem = navigator.deviceMemory ? navigator.deviceMemory + " GB" : "memory n/a";
+            var bat = "battery n/a";
+            try {
+              if (navigator.getBattery) {
+                var b = await withTimeout(navigator.getBattery(), 500);
+                bat = Math.round(b.level * 100) + "% " + (b.charging ? "charging" : "on battery");
+              }
+            } catch (e) { bat = "battery hidden"; }
+            return ["hw", cores + " · " + mem + " · " + bat];
+          },
+          async function () {
+            var note = "Journal can save on this device";
+            try {
+              localStorage.setItem("golddesk-probe", "1");
+              localStorage.removeItem("golddesk-probe");
+            } catch (e) { note = "Local storage blocked"; }
+            try {
+              if (navigator.storage && navigator.storage.estimate) {
+                var est = await withTimeout(navigator.storage.estimate(), 500);
+                if (est && est.quota) {
+                  note += " · " + Math.round(Math.max(0, est.quota - (est.usage || 0)) / 1048576) + " MB free";
+                }
+              }
+            } catch (e) { /* quota hidden */ }
+            return ["store", note];
+          }
+        ];
+
+        var done = 0;
+        var total = spec.length;
+        for (var i = 0; i < jobs.length; i++) {
+          var id = spec[i][0];
+          setRow(id, "Checking", "run");
+          lineEl.textContent = spec[i][1];
+          var result;
+          try { result = await jobs[i](); }
+          catch (e) { result = [id, "Check skipped"]; }
+          setRow(result[0], result[1], "ok");
+          done += 1;
+          paintProgress(done, total);
+          await wait(step);
+        }
+
+        var files = [["css", "desk.css"], ["js", "desk.js"], ["html", "desk.html"]];
+        for (var f = 0; f < files.length; f++) {
+          lineEl.textContent = "Loading " + files[f][1];
+          try {
+            await asset(files[f][0], files[f][1]);
+          } catch (e) {
+            setRow(files[f][0], files[f][1] + " will load with the desk", "bad");
+          }
+          done += 1;
+          paintProgress(done, total);
+          await wait(step);
+        }
+
+        lineEl.textContent = "Desk ready";
+        var finalPct = paintProgress(total, total);
+        await wait(reduced ? 80 : 360);
+        if (finalPct < 50) {
+          retry.hidden = false;
+          lineEl.textContent = "Held under 50%. Open the desk when you are ready.";
+          return;
+        }
+        go(finalPct);
+      }
+
+      run().catch(function () {
+        lineEl.textContent = "Loader fault. You can still open the desk.";
+        retry.hidden = false;
+        paintProgress(spec.length, spec.length);
+      });
+    })();
+  </script>
+</body>
+</html>
